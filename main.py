@@ -2,8 +2,6 @@ import os
 import sys
 import time
 import multiprocessing
-from functools import partial
-
 from utils import (
     ler_mapa,
     encontrar_posicoes,
@@ -21,21 +19,31 @@ LIMITE_TEMPO = 600.0
 REPETICOES = 10
 
 
+# Função alvo global (picklável) para execução com timeout
+def _executar_alvo(func, args, result_dict, finished):
+    """Executa func(*args) e armazena o resultado em result_dict."""
+    try:
+        res = func(*args)
+        result_dict['resultado'] = res
+    except Exception as e:
+        result_dict['erro'] = str(e)
+    finally:
+        finished.set()
+
+
 def executar_com_timeout(func, *args, timeout=LIMITE_TEMPO):
+    """
+    Executa func(*args) com limite de timeout (segundos).
+    Retorna (resultado, tempo_gasto, excedeu).
+    """
     with multiprocessing.Manager() as manager:
         result_dict = manager.dict()
         finished = multiprocessing.Event()
 
-        def target():
-            try:
-                res = func(*args)
-                result_dict['resultado'] = res
-            except Exception as e:
-                result_dict['erro'] = str(e)
-            finally:
-                finished.set()
-
-        p = multiprocessing.Process(target=target)
+        p = multiprocessing.Process(
+            target=_executar_alvo,
+            args=(func, args, result_dict, finished)
+        )
         p.start()
         inicio = time.perf_counter()
         finished.wait(timeout)
@@ -54,11 +62,16 @@ def executar_com_timeout(func, *args, timeout=LIMITE_TEMPO):
 
 
 def executar_algoritmo_repeticoes(func, *args, repeticoes=REPETICOES):
+    """
+    Executa o algoritmo 'repeticoes' vezes, com timeout global.
+    Se qualquer execução exceder o limite, interrompe e retorna TEMPO LIMITE.
+    Caso contrário, retorna o resultado da última execução, o tempo médio e False.
+    """
     tempos = []
     resultado = None
     excedeu = False
 
-    for i in range(repeticoes):
+    for _ in range(repeticoes):
         res, tempo, excedeu_parcial = executar_com_timeout(func, *args)
         if excedeu_parcial:
             return None, LIMITE_TEMPO, True
@@ -105,6 +118,7 @@ def main():
 
     print(f"Arquivo: {caminho_arquivo}\n")
 
+    # Dijkstra
     res_dij, tempo_dij, excedeu_dij = executar_algoritmo_repeticoes(
         dijkstra, V, adj, id_inicio
     )
@@ -116,6 +130,7 @@ def main():
         custo_dij = dist_dij[id_fim]
     imprimir_resultado("Dijkstra", custo_dij, tempo_dij, excedeu_dij)
 
+    # Bellman-Ford
     res_bf, tempo_bf, excedeu_bf = executar_algoritmo_repeticoes(
         bellman_ford, V, adj, id_inicio
     )
@@ -127,6 +142,7 @@ def main():
         custo_bf = dist_bf[id_fim]
     imprimir_resultado("Bellman-Ford", custo_bf, tempo_bf, excedeu_bf)
 
+    # Floyd-Warshall
     res_fw, tempo_fw, excedeu_fw = executar_algoritmo_repeticoes(
         floyd_warshall, V, matriz
     )
@@ -138,10 +154,12 @@ def main():
         custo_fw = dist_fw[id_inicio][id_fim]
     imprimir_resultado("Floyd-Warshall", custo_fw, tempo_fw, excedeu_fw)
 
+    # IDs especiais
     id_portal1 = portais[0][0] * colunas + portais[0][1]
     id_portal2 = portais[1][0] * colunas + portais[1][1]
     ids_especiais = {id_inicio, id_fim, id_portal1, id_portal2}
 
+    # Geração dos arquivos de saída (apenas se houver caminho e não houve timeout)
     if not excedeu_dij and prev_dij is not None:
         caminho_dij = reconstruir_caminho(prev_dij, id_inicio, id_fim)
         if caminho_dij:
@@ -164,4 +182,5 @@ def main():
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()
