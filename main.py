@@ -19,12 +19,6 @@ LIMITE_TEMPO = 600
 
 
 def executar_algoritmo_repeticoes(func, *args, repeticoes=10):
-    """
-    Executa um algoritmo 'repeticoes' vezes e retorna:
-    - o resultado da última execução (ou da primeira, tanto faz)
-    - o tempo médio
-    - um booleano indicando se algum tempo excedeu o limite de 600s
-    """
     tempos = []
     resultado = None
     excedeu_limite = False
