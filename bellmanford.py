@@ -6,7 +6,7 @@ def bellman_ford(V, adj, s):
     dist[s] = 0
     prev[s] = s
 
-    for _ in range(V):
+    for _ in range(V - 1):
         atualizou = False
         for u in range(V):
             for v, peso in adj[u]:
