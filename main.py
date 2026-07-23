@@ -32,10 +32,7 @@ def _executar_alvo(func, args, result_dict, finished):
 
 
 def executar_com_timeout(func, *args, timeout=LIMITE_TEMPO):
-    """
-    Executa func(*args) com limite de timeout (segundos).
-    Retorna (resultado, tempo_gasto, excedeu).
-    """
+
     with multiprocessing.Manager() as manager:
         result_dict = manager.dict()
         finished = multiprocessing.Event()
@@ -62,11 +59,7 @@ def executar_com_timeout(func, *args, timeout=LIMITE_TEMPO):
 
 
 def executar_algoritmo_repeticoes(func, *args, repeticoes=REPETICOES):
-    """
-    Executa o algoritmo 'repeticoes' vezes, com timeout global.
-    Se qualquer execução exceder o limite, interrompe e retorna TEMPO LIMITE.
-    Caso contrário, retorna o resultado da última execução, o tempo médio e False.
-    """
+
     tempos = []
     resultado = None
     excedeu = False
